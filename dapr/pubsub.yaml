@@ -1,0 +1,22 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+spec:
+  type: pubsub.rabbitmq
+  version: v1
+  metadata:
+    - name: connectionString
+      value: amqp://guest:guest@rabbitmq:5672 # local demo only
+    - name: durable
+      value: "true"
+    - name: deletedWhenUnused
+      value: "false"
+    - name: deliveryMode
+      value: "2" # persistent messages
+    - name: publisherConfirm
+      value: "true"
+    - name: prefetchCount
+      value: "10"
+    - name: reconnectWait
+      value: "3"

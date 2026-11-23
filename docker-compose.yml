@@ -1,0 +1,50 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    ports:
+      - "127.0.0.1:15672:15672" # management UI, guest / guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+
+  orders-api:
+    build:
+      context: .
+      args: { PROJECT: OrdersApi }
+    environment:
+      ConnectionStrings__Db: Data Source=/data/orders.db
+    ports:
+      - "127.0.0.1:8081:8080"
+
+  orders-api-dapr:
+    image: daprio/daprd:1.19.2
+    command: ["./daprd", "--app-id", "orders-api", "--app-port", "8080", "--resources-path", "/dapr"]
+    volumes:
+      - ./dapr:/dapr:ro
+    network_mode: "service:orders-api"
+    restart: on-failure
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+      orders-api: { condition: service_started }
+
+  payments:
+    build:
+      context: .
+      args: { PROJECT: PaymentsService }
+    environment:
+      ConnectionStrings__Db: Data Source=/data/payments.db
+    ports:
+      - "127.0.0.1:8082:8080"
+
+  payments-dapr:
+    image: daprio/daprd:1.19.2
+    command: ["./daprd", "--app-id", "payments", "--app-port", "8080", "--resources-path", "/dapr"]
+    volumes:
+      - ./dapr:/dapr:ro
+    network_mode: "service:payments"
+    restart: on-failure
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+      payments: { condition: service_started }
